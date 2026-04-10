@@ -2,6 +2,8 @@ export default function handler(req, res) {
   const now = new Date();
 
   const time = now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: false
   });
 
@@ -20,7 +22,7 @@ export default function handler(req, res) {
     </defs>
 
     <!-- GIF background -->
-    <image href="https://raw.githubusercontent.com/acharya-aayush/github-clock-api/main/readme.gif"
+    <image href="/readme.gif"
            width="2048" height="1228"/>
 
     <!-- Hide original clock area to prevent ghosting -->
