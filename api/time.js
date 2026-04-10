@@ -1,13 +1,21 @@
 export default function handler(req, res) {
   const now = new Date();
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const host = req.headers.host;
+  const baseUrl = `${protocol}://${host}`;
+  const backgroundGifUrl = `${baseUrl}/readme.gif`;
 
   const time = now.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Kathmandu",
     hour12: false
   });
 
-  res.setHeader("Content-Type", "image/svg+xml");
+  res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
 
   res.send(`
   <svg width="2048" height="1228" xmlns="http://www.w3.org/2000/svg">
@@ -22,7 +30,7 @@ export default function handler(req, res) {
     </defs>
 
     <!-- GIF background -->
-    <image href="/readme.gif"
+    <image href="${backgroundGifUrl}"
            width="2048" height="1228"/>
 
     <!-- Hide original clock area to prevent ghosting -->
