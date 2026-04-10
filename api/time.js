@@ -1,16 +1,43 @@
-export default function handler(req, res) {
+const gifCache = new Map();
+
+async function getBackgroundGifDataUri(baseUrl) {
+  if (gifCache.has(baseUrl)) {
+    return gifCache.get(baseUrl);
+  }
+
+  const gifResponse = await fetch(`${baseUrl}/readme.gif`);
+  if (!gifResponse.ok) {
+    throw new Error(`Failed to load readme.gif (${gifResponse.status})`);
+  }
+
+  const gifArrayBuffer = await gifResponse.arrayBuffer();
+  const gifBase64 = Buffer.from(gifArrayBuffer).toString("base64");
+  const dataUri = `data:image/gif;base64,${gifBase64}`;
+  gifCache.set(baseUrl, dataUri);
+  return dataUri;
+}
+
+export default async function handler(req, res) {
   const now = new Date();
   const protocol = req.headers["x-forwarded-proto"] || "https";
   const host = req.headers.host;
   const baseUrl = `${protocol}://${host}`;
-  const backgroundGifUrl = `${baseUrl}/readme.gif`;
 
-  const time = now.toLocaleTimeString("en-US", {
+  let backgroundGifDataUri;
+  try {
+    backgroundGifDataUri = await getBackgroundGifDataUri(baseUrl);
+  } catch (error) {
+    res.status(500).send("Unable to load background GIF.");
+    return;
+  }
+
+  const timeStr = now.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Asia/Kathmandu",
     hour12: false
   });
+  const [hours, minutes] = timeStr.split(':');
 
   res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0");
@@ -19,9 +46,18 @@ export default function handler(req, res) {
 
   res.send(`
   <svg width="2048" height="1228" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      @keyframes blink {
+        0%, 49% { opacity: 1; }
+        50%, 100% { opacity: 0; }
+      }
+      .colon {
+        animation: blink 1s step-start infinite;
+      }
+    </style>
     <defs>
       <filter id="glow">
-        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
         <feMerge>
           <feMergeNode in="coloredBlur"/>
           <feMergeNode in="SourceGraphic"/>
@@ -29,22 +65,19 @@ export default function handler(req, res) {
       </filter>
     </defs>
 
-    <!-- GIF background -->
-    <image href="${backgroundGifUrl}"
-           width="2048" height="1228"/>
+    <image href="${backgroundGifDataUri}" width="2048" height="1228"/>
 
-    <!-- Hide original clock area to prevent ghosting -->
-    <rect x="950" y="170" width="250" height="120" fill="#1a1a1a"/>
+    <rect x="1095" y="285" width="172" height="65" fill="#0e0e0e"/>
 
-    <!-- Dynamic clock text -->
-    <text x="1075" y="250"
-          font-size="90"
+    <text x="1179" y="342"
+          font-size="52"
           fill="#ff3b3b"
           text-anchor="middle"
           font-family="monospace"
-          letter-spacing="4"
+          font-weight="bold"
+          letter-spacing="2"
           filter="url(#glow)">
-      ${time}
+      <tspan>${hours}</tspan><tspan class="colon">:</tspan><tspan>${minutes}</tspan>
     </text>
 
   </svg>
